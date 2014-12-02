@@ -7,8 +7,9 @@ module type BINHEAP = sig
     val isempty : 'a bh -> bool
     val insert : 'a -> 'a bh -> 'a bh
     val remove : 'a bh -> ('a * 'a bh) option
-    val max : 'a bh -> 'a
+    val max : 'a bh -> 'a option
     val comparator : 'a bh -> 'a comparator
+    val size : 'a bh -> int
     (*val test : int bh -> unit*)
 end
 
@@ -96,28 +97,32 @@ module BinHeap : BINHEAP = struct
             heapifyall bh (n - 1) in
         let () = heapifyall r ((Array.length @@ snd @@ r) / 2) in
         r 
-    let max bh = Array.get (snd bh) 0
+    let max bh = 
+        if (Array.length @@ snd @@ bh) = 0 then None else
+        Some (snd bh).(0)
     let comparator bh = fst bh
     let remove (bh : 'a bh) : ('a * 'a bh) option =
         if isempty bh then None else
         let cmp = fst bh
-        and maxe = max bh 
+        and Some maxe = max bh 
         and last = (snd bh).(Array.length (snd bh) - 1) in
         let () = (snd bh).(0) <- last in
         let sbh = (cmp, Array.sub (snd bh) 0 (Array.length (snd bh) - 1)) in
         let r = heapify sbh 1 in
         Some (maxe, r)
+    let size bh =
+        let (cmp, bhl) = bh in
+        Array.length bhl
 end
 
-
-module type PP = sig
-    type 'a t
-    val f : 'a t-> int
-    val make : unit -> 'a t
-end
-
-module Pq : PP = struct
-    type 'a t = (int * int) option
-    let make () = Some (1, 1)
-    let f a = 2
+module Pq : PQ = struct
+    exception PqueueError
+    type 'a t = 'a BinHeap.bh 
+    let empty cmp = try BinHeap.empty cmp with BinHeap.BinHeapError -> raise PqueueError
+    let insert e pq = try BinHeap.insert e pq with BinHeap.BinHeapError -> raise PqueueError
+    let remove pq = try BinHeap.remove pq with BinHeap.BinHeapError -> raise PqueueError
+    let max pq = try BinHeap.max pq with BinHeap.BinHeapError -> raise PqueueError
+    let comparator pq = try BinHeap.comparator pq with BinHeap.BinHeapError -> raise PqueueError
+    let is_empty pq = BinHeap.isempty pq
+    let size pq = BinHeap.size pq
 end
